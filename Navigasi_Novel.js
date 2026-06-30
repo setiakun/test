@@ -1,16 +1,19 @@
 (function() {
+  // Ambil elemen pertama dengan class NavJS
   var container = document.querySelector('.NavJS');
   if (!container) return;
 
   var label = container.getAttribute('data-label');
   if (!label) return;
+
+  // Tampilkan UI navigasi
   container.innerHTML = `
     <div id="PrevNextNav">
       <button id="prevBtn">Prev</button>
       <button id="homeBtn">Home</button>
       <button id="nextBtn">Next</button>
     </div>
-    <select id="chapterSelect"><option>Memuat...</option></select>
+    <select id="chapterSelect"><option>Memuat daftar bab...</option></select>
   `;
 
   var select = document.getElementById('chapterSelect');
@@ -25,12 +28,11 @@
   var currentUrl = location.href.split('?')[0];
   var feedUrl = '//' + location.hostname + '/feeds/posts/default/-/' + encodeURIComponent(label) + '?alt=json-in-script&callback=navCallback&start-index=';
 
-  // Fungsi untuk memuat feed dengan callback unik
   function loadFeed(start) {
     var script = document.createElement('script');
     script.src = feedUrl + start + '&max-results=500';
     script.onerror = function() {
-      select.innerHTML = '<option>Gagal memuat data</option>';
+      select.innerHTML = '<option>Gagal memuat data. Coba refresh.</option>';
       prevBtn.disabled = true;
       nextBtn.disabled = true;
       homeBtn.disabled = true;
@@ -38,10 +40,9 @@
     document.body.appendChild(script);
   }
 
-  // Callback global (akan di-override jika ada dua widget, tapi aman karena hanya satu)
   window.navCallback = function(json) {
     if (!json.feed.entry) {
-      select.innerHTML = '<option>Tidak ada bab</option>';
+      select.innerHTML = '<option>Tidak ada bab ditemukan</option>';
       prevBtn.disabled = true;
       nextBtn.disabled = true;
       homeBtn.disabled = true;
@@ -76,10 +77,9 @@
   };
 
   function initNavigation() {
-    // Urutkan dari yang tertua ke terbaru (ascending)
+    // Urutkan dari bab tertua ke terbaru
     posts.sort(function(a, b) { return a.date - b.date; });
 
-    // Isi select
     select.innerHTML = '';
     for (var i = 0; i < posts.length; i++) {
       var option = document.createElement('option');
@@ -92,47 +92,42 @@
       }
     }
 
-    // Jika currentIndex tidak ditemukan (misal halaman ini tidak ada di daftar), set ke 0
+    // Jika halaman saat ini bukan bab (misal daftar isi), nonaktifkan Prev/Next
     if (currentIndex === -1) {
-      currentIndex = 0;
-      select.selectedIndex = 0;
-      // Tetapi tombol tetap aktif? Halaman mungkin tidak terdaftar, maka nonaktifkan
-      // Atau biarkan pengguna pilih manual.
-      // Lebih baik nonaktifkan tombol dan beri pesan
       prevBtn.disabled = true;
       nextBtn.disabled = true;
-      homeBtn.disabled = true;
-      select.innerHTML = '<option>Halaman tidak ditemukan dalam daftar bab</option>';
+      homeBtn.onclick = function() {
+        location.href = '/search/label/' + encodeURIComponent(label);
+      };
+      select.innerHTML = '<option>Halaman ini bukan bab</option>';
       return;
     }
 
-    // Event listener untuk prev
+    // Tombol Prev
     prevBtn.onclick = function() {
-      if (currentIndex > 0) {
-        location.href = posts[currentIndex - 1].url;
-      }
-    };
-    nextBtn.onclick = function() {
-      if (currentIndex < posts.length - 1) {
-        location.href = posts[currentIndex + 1].url;
-      }
-    };
-    homeBtn.onclick = function() {
-      // Alihkan ke halaman indeks novel, misal ke /p/daftar-novel.html atau root
-      // Ubah sesuai kebutuhan, contoh:
-      location.href = '/p/daftar-novel.html';
+      if (currentIndex > 0) location.href = posts[currentIndex - 1].url;
     };
 
-    // Disable tombol jika di ujung
+    // Tombol Next
+    nextBtn.onclick = function() {
+      if (currentIndex < posts.length - 1) location.href = posts[currentIndex + 1].url;
+    };
+
+    // Tombol Home => ke halaman daftar isi (semua postingan dengan label ini)
+    homeBtn.onclick = function() {
+      location.href = '/search/label/' + encodeURIComponent(label);
+    };
+
+    // Nonaktifkan tombol jika di ujung
     if (currentIndex === 0) prevBtn.disabled = true;
     if (currentIndex === posts.length - 1) nextBtn.disabled = true;
 
-    // Navigasi via select
+    // Navigasi via dropdown
     select.addEventListener('change', function() {
       location.href = this.value;
     });
   }
 
-  // Mulai load feed dari index 1
+  // Mulai ambil data dari bab pertama
   loadFeed(1);
 })();
