@@ -83,7 +83,7 @@
 
         countEl.textContent = `${chapters.length} chapters`;
 
-        const PAGE_SIZE = 25;
+        const PAGE_SIZE = 50;
         let currentPage = 1;
         const totalPages = Math.ceil(chapters.length / PAGE_SIZE);
 
